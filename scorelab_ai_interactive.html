@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ScoreLab AI — Student Performance Predictor</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#070b14;--panel:#0d1322;--panel2:#111a2d;--line:#26324a;
+  --text:#eef4ff;--muted:#8e9bb3;--cyan:#52d9ff;--violet:#8d7aff;
+  --green:#5be7a7;--orange:#ffb86b;--red:#ff6f91;--white:#fff;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+ margin:0;background:
+ radial-gradient(circle at 15% 10%,rgba(82,217,255,.11),transparent 28%),
+ radial-gradient(circle at 85% 15%,rgba(141,122,255,.13),transparent 30%),
+ linear-gradient(180deg,#060a12 0%,#090e19 55%,#060a12 100%);
+ color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;
+ min-height:100vh;overflow-x:hidden
+}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.28;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(to bottom,#000,transparent 85%)}
+a{color:inherit}
+button,input{font:inherit}
+.container{width:min(1180px,calc(100% - 36px));margin:auto}
+.nav{position:sticky;top:0;z-index:20;background:rgba(6,10,18,.74);backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.07)}
+.navin{height:70px;display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:11px;font-weight:800;letter-spacing:-.03em}
+.logoMark{width:34px;height:34px;border-radius:11px;background:conic-gradient(from 210deg,var(--cyan),var(--violet),var(--cyan));display:grid;place-items:center;box-shadow:0 0 30px rgba(82,217,255,.2)}
+.logoMark:after{content:"";width:13px;height:13px;border-radius:50%;background:#08101c}
+.navlinks{display:flex;gap:22px;color:var(--muted);font-size:14px}
+.navlinks a{text-decoration:none}.navlinks a:hover{color:var(--text)}
+.navbtn{border:1px solid var(--line);background:#0d1422;color:var(--text);padding:9px 13px;border-radius:11px;cursor:pointer}
+
+.hero{padding:72px 0 44px;display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center}
+.eyebrow{display:inline-flex;gap:8px;align-items:center;border:1px solid rgba(82,217,255,.2);background:rgba(82,217,255,.06);padding:7px 11px;border-radius:999px;color:#a9eaff;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green)}
+h1{font-size:clamp(42px,6vw,78px);line-height:.96;letter-spacing:-.065em;margin:20px 0}
+.gradient{background:linear-gradient(100deg,#fff 20%,#82e8ff 50%,#9d8cff 80%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{font-size:17px;line-height:1.7;color:var(--muted);max-width:650px}
+.heroActions{display:flex;gap:12px;margin-top:26px;flex-wrap:wrap}
+.primary,.secondary{border:0;border-radius:13px;padding:13px 17px;cursor:pointer;font-weight:800}
+.primary{background:linear-gradient(100deg,var(--cyan),#7b9cff);color:#07101c;box-shadow:0 12px 35px rgba(82,217,255,.16)}
+.secondary{background:#101827;color:var(--text);border:1px solid var(--line)}
+.miniStats{display:flex;gap:25px;margin-top:26px;flex-wrap:wrap}.miniStats b{font-size:21px}.miniStats span{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+
+.orbWrap{height:390px;display:grid;place-items:center;position:relative}
+.orbGlow{position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(82,217,255,.16),transparent 67%);filter:blur(8px)}
+.scoreOrb{width:265px;height:265px;border-radius:50%;display:grid;place-items:center;position:relative;background:conic-gradient(var(--cyan) 0deg,var(--violet) 220deg,#182338 220deg);box-shadow:0 0 80px rgba(82,217,255,.12);transition:.5s}
+.scoreOrb:before{content:"";position:absolute;inset:12px;border-radius:50%;background:radial-gradient(circle at 35% 25%,#17243b,#090f1c 62%);border:1px solid rgba(255,255,255,.07)}
+.scoreInside{position:relative;text-align:center}.scoreNum{font-size:64px;font-weight:900;letter-spacing:-.06em}.scoreUnit{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.15em}.scoreStatus{margin-top:8px;color:var(--green);font-weight:800;font-size:13px}
+.float{position:absolute;border:1px solid var(--line);background:rgba(13,19,34,.84);backdrop-filter:blur(12px);padding:10px 12px;border-radius:13px;box-shadow:0 12px 35px rgba(0,0,0,.2);font-size:12px;color:var(--muted)}
+.float strong{display:block;color:var(--text);font-size:15px;margin-top:2px}.f1{top:45px;left:10px}.f2{right:5px;top:115px}.f3{bottom:45px;left:40px}
+
+.section{padding:38px 0}.sectionHead{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:18px}.sectionHead h2{font-size:30px;margin:0;letter-spacing:-.04em}.sectionHead p{color:var(--muted);margin:7px 0 0}
+.grid{display:grid;grid-template-columns:1.05fr .95fr;gap:18px}
+.card{background:linear-gradient(145deg,rgba(17,26,45,.9),rgba(10,16,29,.9));border:1px solid rgba(255,255,255,.075);border-radius:20px;box-shadow:0 18px 60px rgba(0,0,0,.18)}
+.controls{padding:22px}
+.control{margin-bottom:21px}.control:last-child{margin-bottom:0}
+.labelrow{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}.labelrow label{font-weight:700;font-size:14px}.value{color:#a9eaff;font-weight:800}
+input[type=range]{width:100%;accent-color:#64dcff;cursor:pointer}
+.rangeMeta{display:flex;justify-content:space-between;color:#66738a;font-size:11px;margin-top:4px}
+.selectrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+select{width:100%;background:#0a111e;color:var(--text);border:1px solid var(--line);border-radius:11px;padding:11px;outline:none}
+.presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.preset{background:#0a111e;color:#b9c5d8;border:1px solid var(--line);padding:8px 10px;border-radius:10px;cursor:pointer;font-size:12px}.preset:hover{border-color:#5d779b;color:white}
+
+.insight{padding:22px;display:flex;flex-direction:column}
+.insightTop{display:flex;justify-content:space-between;align-items:center}.badge{font-size:11px;padding:6px 9px;border-radius:999px;background:rgba(91,231,167,.08);color:var(--green);border:1px solid rgba(91,231,167,.18)}
+.confidence{margin-top:22px}.confLine{height:9px;background:#182237;border-radius:999px;overflow:hidden}.confFill{height:100%;width:78%;border-radius:inherit;background:linear-gradient(90deg,var(--cyan),var(--violet));transition:.5s}
+.explain{margin-top:24px}.feature{display:grid;grid-template-columns:120px 1fr 48px;gap:12px;align-items:center;margin:13px 0;font-size:12px}.bar{height:7px;background:#182237;border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--cyan),var(--violet));transition:.5s}.impact{color:#9aa8bf;text-align:right}
+.run{margin-top:auto;padding-top:20px}.runBtn{width:100%;padding:14px;border:0;border-radius:13px;background:linear-gradient(100deg,#6ee6ff,#8c7cff);font-weight:900;color:#06101b;cursor:pointer}.runBtn:disabled{opacity:.6;cursor:wait}
+
+.training{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:14px}.step{padding:15px;border:1px solid var(--line);border-radius:15px;background:#0a111e;position:relative;overflow:hidden}.step .num{font-size:11px;color:#65738a}.step h3{margin:6px 0;font-size:14px}.step p{margin:0;color:var(--muted);font-size:12px;line-height:1.5}.step.active{border-color:rgba(82,217,255,.55);box-shadow:0 0 30px rgba(82,217,255,.07)}.step.active:after{content:"";position:absolute;left:0;bottom:0;height:2px;width:100%;background:linear-gradient(90deg,var(--cyan),var(--violet));animation:load 1s linear infinite}@keyframes load{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+
+.charts{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}.chartCard{padding:20px;height:355px}.chartCard canvas{max-height:275px}
+.toggle{display:flex;gap:6px;background:#090f1b;padding:4px;border:1px solid var(--line);border-radius:11px}.toggle button{background:transparent;border:0;color:var(--muted);padding:7px 10px;border-radius:8px;cursor:pointer;font-size:12px}.toggle button.on{background:#182338;color:var(--text)}
+
+.whatif{padding:22px;display:grid;grid-template-columns:1fr auto;align-items:center;gap:20px}.delta{font-size:30px;font-weight:900;color:var(--green)}.whatif p{color:var(--muted);margin:6px 0 0}
+.reveal{animation:reveal .55s ease both}@keyframes reveal{from{opacity:.2;transform:translateY(5px) scale(.98)}to{opacity:1;transform:none}}
+
+.pipeline{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.pipe{padding:18px;border:1px solid var(--line);border-radius:16px;background:#0a111e}.pipe span{font-size:11px;color:#637188}.pipe h3{font-size:16px;margin:8px 0}.pipe p{font-size:12px;color:var(--muted);line-height:1.55;margin:0}
+
+footer{padding:50px 0 70px;color:#68758b;font-size:12px}.foot{border-top:1px solid rgba(255,255,255,.07);padding-top:20px;display:flex;justify-content:space-between;gap:15px}.source{color:#9eacc0}.source:hover{color:white}
+
+.modal{position:fixed;inset:0;background:rgba(2,5,10,.72);backdrop-filter:blur(9px);display:none;place-items:center;z-index:50;padding:20px}.modal.show{display:grid}.modalBox{width:min(650px,100%);background:#0c1422;border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:0 30px 100px #000}.close{float:right;background:#172236;color:white;border:0;border-radius:9px;padding:7px 10px;cursor:pointer}.modalBox pre{white-space:pre-wrap;background:#080d16;padding:16px;border-radius:13px;max-height:430px;overflow:auto;color:#bcd0e9;font-size:12px;line-height:1.6}
+
+@media(max-width:850px){.hero,.grid,.charts{grid-template-columns:1fr}.hero{padding-top:45px}.orbWrap{height:320px}.pipeline{grid-template-columns:1fr 1fr}.navlinks{display:none}}
+@media(max-width:560px){.container{width:min(100% - 22px,1180px)}.scoreOrb{width:225px;height:225px}.scoreNum{font-size:53px}.training,.pipeline{grid-template-columns:1fr}.feature{grid-template-columns:95px 1fr 42px}.hero h1{font-size:48px}}
+</style>
+</head>
+<body>
+<nav class="nav">
+ <div class="container navin">
+  <div class="logo"><div class="logoMark"></div>ScoreLab AI</div>
+  <div class="navlinks"><a href="#lab">Prediction Lab</a><a href="#insights">Insights</a><a href="#model">Model</a></div>
+  <button class="navbtn" onclick="openCode()">View Python</button>
+ </div>
+</nav>
+
+<main>
+<section class="hero container">
+ <div>
+  <span class="eyebrow"><span class="dot"></span> Interactive ML Experiment</span>
+  <h1>Predict the score.<br><span class="gradient">Explore the why.</span></h1>
+  <p>Move the student profile sliders and watch a machine-learning-style prediction respond in real time. Then run the simulated pipeline to see cleaning, training and evaluation come alive.</p>
+  <div class="heroActions">
+   <button class="primary" onclick="document.querySelector('#lab').scrollIntoView({behavior:'smooth'})">Launch Prediction Lab ↓</button>
+   <button class="secondary" onclick="setPreset('consistent')">Try a student profile</button>
+  </div>
+  <div class="miniStats"><div><b>649</b><span>UCI records</span></div><div><b>5</b><span>live controls</span></div><div><b>∞</b><span>what-if scenarios</span></div></div>
+ </div>
+ <div class="orbWrap">
+  <div class="orbGlow"></div>
+  <div class="float f1">Study time<strong id="floatStudy">3.0 h</strong></div>
+  <div class="float f2">Confidence<strong id="floatConf">82%</strong></div>
+  <div class="float f3">Risk signal<strong id="floatRisk">Low</strong></div>
+  <div class="scoreOrb" id="scoreOrb"><div class="scoreInside"><div class="scoreNum" id="score">14.8</div><div class="scoreUnit">predicted / 20</div><div class="scoreStatus" id="status">Strong outlook</div></div></div>
+ </div>
+</section>
+
+<section id="lab" class="section container">
+ <div class="sectionHead"><div><h2>Prediction Lab</h2><p>Change the inputs. The model reacts instantly.</p></div><span class="badge">LIVE DEMO MODEL</span></div>
+ <div class="grid">
+  <div class="card controls">
+   <div class="control"><div class="labelrow"><label>Weekly study time</label><span class="value" id="studyVal">3.0 h</span></div><input id="study" type="range" min="0" max="8" step=".1" value="3"><div class="rangeMeta"><span>0h</span><span>4h</span><span>8h</span></div></div>
+   <div class="control"><div class="labelrow"><label>Previous grade — G1</label><span class="value" id="g1Val">14</span></div><input id="g1" type="range" min="0" max="20" step="1" value="14"><div class="rangeMeta"><span>0</span><span>10</span><span>20</span></div></div>
+   <div class="control"><div class="labelrow"><label>Previous grade — G2</label><span class="value" id="g2Val">15</span></div><input id="g2" type="range" min="0" max="20" step="1" value="15"><div class="rangeMeta"><span>0</span><span>10</span><span>20</span></div></div>
+   <div class="control"><div class="labelrow"><label>Absences</label><span class="value" id="absVal">3 days</span></div><input id="abs" type="range" min="0" max="30" step="1" value="3"><div class="rangeMeta"><span>0</span><span>15</span><span>30+</span></div></div>
+   <div class="control"><div class="labelrow"><label>Past failures</label><span class="value" id="failVal">0</span></div><input id="fail" type="range" min="0" max="4" step="1" value="0"><div class="rangeMeta"><span>0</span><span>2</span><span>4</span></div></div>
+   <div class="selectrow">
+    <select id="support"><option value="1">Extra support: Yes</option><option value="0">Extra support: No</option></select>
+    <select id="mode"><option>Mathematics</option><option>Portuguese</option></select>
+   </div>
+   <div class="presets">
+    <button class="preset" onclick="setPreset('consistent')">Consistent</button>
+    <button class="preset" onclick="setPreset('lastminute')">Last-minute</button>
+    <button class="preset" onclick="setPreset('top')">Top performer</button>
+    <button class="preset" onclick="setPreset('struggling')">Needs help</button>
+   </div>
+  </div>
+
+  <div class="card insight" id="insights">
+   <div class="insightTop"><div><div style="font-size:12px;color:var(--muted)">MODEL OUTPUT</div><h2 style="margin:5px 0 0">Student outlook</h2></div><span class="badge" id="riskBadge">LOW RISK</span></div>
+   <div class="confidence"><div class="labelrow"><label>Prediction confidence</label><span class="value" id="confText">82%</span></div><div class="confLine"><div class="confFill" id="confFill"></div></div></div>
+   <div class="explain">
+    <div style="font-size:13px;font-weight:800">What is driving the score?</div>
+    <div class="feature"><span>G2 grade</span><div class="bar"><i id="bG2"></i></div><span class="impact" id="iG2">+4.2</span></div>
+    <div class="feature"><span>G1 grade</span><div class="bar"><i id="bG1"></i></div><span class="impact" id="iG1">+3.8</span></div>
+    <div class="feature"><span>Study time</span><div class="bar"><i id="bStudy"></i></div><span class="impact" id="iStudy">+1.1</span></div>
+    <div class="feature"><span>Absences</span><div class="bar"><i id="bAbs"></i></div><span class="impact" id="iAbs">−0.2</span></div>
+    <div class="feature"><span>Failures</span><div class="bar"><i id="bFail"></i></div><span class="impact" id="iFail">−0.0</span></div>
+   </div>
+   <div class="training">
+    <div class="step" id="s1"><span class="num">01</span><h3>Clean</h3><p>Handle missing values and prepare features.</p></div>
+    <div class="step" id="s2"><span class="num">02</span><h3>Train</h3><p>Fit a regression model to student records.</p></div>
+    <div class="step" id="s3"><span class="num">03</span><h3>Evaluate</h3><p>Measure error and explain the result.</p></div>
+   </div>
+   <div class="run"><button class="runBtn" id="runBtn" onclick="runModel()">▶ Run ML pipeline</button></div>
+  </div>
+ </div>
+</section>
+
+<section class="section container">
+ <div class="sectionHead"><div><h2>What-if engine</h2><p>See how a small change could shift the predicted outcome.</p></div><button class="secondary" onclick="applyImprovement()">+2 study hours</button></div>
+ <div class="card whatif">
+  <div><div style="font-weight:800">Improved study plan</div><p id="whatText">Add 2 hours of study time while keeping everything else the same.</p></div>
+  <div class="delta" id="delta">+0.0</div>
+ </div>
+</section>
+
+<section class="section container">
+ <div class="sectionHead"><div><h2>Live model view</h2><p>The chart changes as you experiment with the student profile.</p></div><div class="toggle"><button id="studyChartBtn" class="on" onclick="chartMode('study')">Study curve</button><button id="gradeChartBtn" onclick="chartMode('grade')">Grade effect</button></div></div>
+ <div class="charts">
+  <div class="card chartCard"><canvas id="lineChart"></canvas></div>
+  <div class="card chartCard"><canvas id="radarChart"></canvas></div>
+ </div>
+</section>
+
+<section id="model" class="section container">
+ <div class="sectionHead"><div><h2>Under the hood</h2><p>The interactive UI mirrors a real beginner-friendly ML workflow.</p></div></div>
+ <div class="pipeline">
+  <div class="pipe"><span>STEP 01</span><h3>Dataset</h3><p>UCI Student Performance dataset with academic, attendance and background variables.</p></div>
+  <div class="pipe"><span>STEP 02</span><h3>Preprocess</h3><p>Inspect missing values, select useful features and prepare the training data.</p></div>
+  <div class="pipe"><span>STEP 03</span><h3>Regression</h3><p>Use Linear Regression from scikit-learn to predict the final grade G3.</p></div>
+  <div class="pipe"><span>STEP 04</span><h3>Evaluate</h3><p>Report MAE, RMSE and R², then visualize patterns with charts.</p></div>
+ </div>
+</section>
+</main>
+
+<footer class="container">
+ <div class="foot"><span>ScoreLab AI · Educational prototype</span><a class="source" href="https://archive.ics.uci.edu/dataset/320/student%2Bperformance" target="_blank">Open UCI dataset ↗</a></div>
+ <p>This browser experience uses an illustrative scoring function for instant interaction. For real evaluation, run the included Python workflow against the UCI data.</p>
+</footer>
+
+<div class="modal" id="modal" onclick="if(event.target===this)closeCode()">
+ <div class="modalBox"><button class="close" onclick="closeCode()">✕</button><h2>Python / scikit-learn starter</h2><pre>import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+import numpy as np
+
+df = pd.read_csv("student-mat.csv", sep=";")
+
+features = ["studytime", "failures", "absences", "G1", "G2"]
+X = df[features]
+y = df["G3"]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+pred = model.predict(X_test)
+
+mae = mean_absolute_error(y_test, pred)
+rmse = np.sqrt(mean_squared_error(y_test, pred))
+r2 = r2_score(y_test, pred)
+
+print("MAE:", mae)
+print("RMSE:", rmse)
+print("R²:", r2)</pre></div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const controls=["study","g1","g2","abs","fail","support"];
+let currentScore=14.8, lineChart, radarChart, chartModeNow="study";
+
+function calc(v){
+ let s=0.65*v.g2+0.28*v.g1+0.38*v.study-0.055*v.abs-0.85*v.fail+0.45*v.support+1.1;
+ s=Math.max(0,Math.min(20,s));
+ return s;
+}
+function getV(){return {study:+$("study").value,g1:+$("g1").value,g2:+$("g2").value,abs:+$("abs").value,fail:+$("fail").value,support:+$("support").value}}
+function update(){
+ const v=getV(), s=calc(v);
+ $("studyVal").textContent=v.study.toFixed(1)+" h";
+ $("g1Val").textContent=v.g1; $("g2Val").textContent=v.g2;
+ $("absVal").textContent=v.abs+" day"+(v.abs===1?"":"s");
+ $("failVal").textContent=v.fail;
+ $("score").textContent=s.toFixed(1);
+ $("floatStudy").textContent=v.study.toFixed(1)+" h";
+ let conf=Math.round(Math.max(61,92-Math.abs(v.g1-v.g2)*2-v.fail*4-v.abs*.35));
+ $("confText").textContent=conf+"%"; $("floatConf").textContent=conf+"%"; $("confFill").style.width=conf+"%";
+ let status=s>=16?"Excellent outlook":s>=13?"Strong outlook":s>=10?"Watch closely":"Needs attention";
+ $("status").textContent=status;
+ let risk=s>=14?"LOW RISK":s>=10?"MEDIUM RISK":"HIGH RISK"; $("riskBadge").textContent=risk;
+ $("floatRisk").textContent=risk.split(" ")[0].charAt(0)+risk.split(" ")[0].slice(1).toLowerCase();
+ let deg=(s/20)*360;
+ $("scoreOrb").style.background=`conic-gradient(var(--cyan) 0deg,var(--violet) ${deg}deg,#182338 ${deg}deg)`;
+ let g2=Math.min(100,v.g2*5),g1=Math.min(100,v.g1*5),study=Math.min(100,v.study/8*100),abs=Math.min(100,v.abs/30*100),fail=Math.min(100,v.fail/4*100);
+ [["bG2",g2],["bG1",g1],["bStudy",study],["bAbs",abs],["bFail",fail]].forEach(([id,x])=>$(id).style.width=x+"%");
+ $("iG2").textContent="+"+(v.g2*.28).toFixed(1);
+ $("iG1").textContent="+"+(v.g1*.28).toFixed(1);
+ $("iStudy").textContent="+"+(v.study*.38).toFixed(1);
+ $("iAbs").textContent="−"+(v.abs*.055).toFixed(1);
+ $("iFail").textContent="−"+(v.fail*.85).toFixed(1);
+ animateScore(s); updateWhatIf(); updateCharts();
+}
+function animateScore(target){
+ const start=currentScore, t0=performance.now(), dur=420;
+ function tick(t){let p=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-p,3);$("score").textContent=(start+(target-start)*e).toFixed(1);if(p<1)requestAnimationFrame(tick);else currentScore=target}
+ requestAnimationFrame(tick);
+}
+controls.forEach(id=>$(id).addEventListener("input",update));
+function setPreset(p){
+ const vals={
+ consistent:{study:4.5,g1:14,g2:15,abs:2,fail:0,support:1},
+ lastminute:{study:1.2,g1:12,g2:11,abs:8,fail:1,support:0},
+ top:{study:6.5,g1:18,g2:19,abs:0,fail:0,support:1},
+ struggling:{study:1.0,g1:8,g2:7,abs:16,fail:2,support:0}
+ }[p];
+ Object.entries(vals).forEach(([k,v])=>$(k).value=v);
+ update(); document.querySelector("#lab").scrollIntoView({behavior:"smooth"});
+}
+function updateWhatIf(){
+ const v=getV(), base=calc(v), better=calc({...v,study:Math.min(8,v.study+2)});
+ $("delta").textContent="+"+(better-base).toFixed(1);
+}
+function applyImprovement(){
+ const old=+$("study").value;$("study").value=Math.min(8,old+2);update();
+ $("whatText").textContent="The profile now includes 2 extra study hours. Compare the predicted change above.";
+}
+async function runModel(){
+ const btn=$("runBtn");btn.disabled=true;btn.textContent="⏳ Running...";
+ ["s1","s2","s3"].forEach(x=>$(x).classList.remove("active"));
+ for(const id of ["s1","s2","s3"]){
+  $(id).classList.add("active"); await new Promise(r=>setTimeout(r,700));
+ }
+ btn.textContent="✓ Pipeline complete";btn.style.background="linear-gradient(100deg,#61e7ad,#6ee6ff)";
+ setTimeout(()=>{btn.disabled=false;btn.textContent="▶ Run ML pipeline";btn.style.background="linear-gradient(100deg,#6ee6ff,#8c7cff)"},1800);
+}
+function makeCharts(){
+ const ctx=$("lineChart").getContext("2d");
+ lineChart=new Chart(ctx,{type:"line",data:{labels:[],datasets:[{label:"Predicted score",data:[],tension:.4,borderWidth:2,pointRadius:3,fill:true,backgroundColor:"rgba(82,217,255,.08)",borderColor:"#52d9ff"}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#9eacc0"}}},scales:{x:{ticks:{color:"#65738a"},grid:{color:"rgba(255,255,255,.05)"}},y:{min:0,max:20,ticks:{color:"#65738a"},grid:{color:"rgba(255,255,255,.05)"}}}}});
+ radarChart=new Chart($("radarChart"),{type:"radar",data:{labels:["Study","G1","G2","Attendance","Stability"],datasets:[{label:"Student profile",data:[],borderWidth:2,backgroundColor:"rgba(141,122,255,.14)",borderColor:"#8d7aff",pointBackgroundColor:"#52d9ff"}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#9eacc0"}}},scales:{r:{min:0,max:100,ticks:{display:false},grid:{color:"rgba(255,255,255,.08)"},angleLines:{color:"rgba(255,255,255,.08)"},pointLabels:{color:"#9eacc0",font:{size:11}}}}}});
+ updateCharts();
+}
+function updateCharts(){
+ if(!lineChart||!radarChart)return;
+ const v=getV();
+ if(chartModeNow==="study"){
+  let labels=[],data=[];for(let h=0;h<=8;h+=.5){labels.push(h+"h");data.push(calc({...v,study:h}).toFixed(1))}
+  lineChart.data.labels=labels;lineChart.data.datasets[0].data=data;lineChart.data.datasets[0].label="Score vs study time";
+ }else{
+  let labels=[],data=[];for(let g=0;g<=20;g+=1){labels.push(g);data.push(calc({...v,g2:g}).toFixed(1))}
+  lineChart.data.labels=labels;lineChart.data.datasets[0].data=data;lineChart.data.datasets[0].label="Score vs G2";
+ }
+ lineChart.update("none");
+ radarChart.data.datasets[0].data=[Math.min(100,v.study/8*100),v.g1*5,v.g2*5,Math.max(0,100-v.abs/30*100),Math.max(0,100-v.fail/4*100)];
+ radarChart.update("none");
+}
+function chartMode(m){
+ chartModeNow=m;
+ $("studyChartBtn").classList.toggle("on",m==="study");$("gradeChartBtn").classList.toggle("on",m==="grade");
+ updateCharts();
+}
+function openCode(){$("modal").classList.add("show")}function closeCode(){$("modal").classList.remove("show")}
+makeCharts();update();
+</script>
+</body>
+</html>
